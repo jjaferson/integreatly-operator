@@ -9,7 +9,6 @@ type InstallationType string
 type ProductName string
 type ProductVersion string
 type PreflightStatus string
-type StageName string
 
 var (
 	PhaseNone                 StatusPhase = ""
@@ -25,21 +24,18 @@ var (
 	InstallationTypeWorkshop InstallationType = "workshop"
 	InstallationTypeManaged  InstallationType = "managed"
 
-	BootstrapStage      StageName = "bootstrap"
-	AuthenticationStage StageName = "authentication"
-	ProductsStage       StageName = "products"
-
-	ProductAMQStreams          ProductName = "amqstreams"
-	ProductAMQOnline           ProductName = "amqonline"
-	ProductSolutionExplorer    ProductName = "solution-explorer"
-	ProductRHSSO               ProductName = "rhsso"
-	ProductRHSSOUser           ProductName = "rhssouser"
-	ProductCodeReadyWorkspaces ProductName = "codeready-workspaces"
-	ProductFuse                ProductName = "fuse"
-	ProductFuseOnOpenshift     ProductName = "fuse-on-openshift"
-	Product3Scale              ProductName = "3scale"
-	ProductNexus               ProductName = "nexus"
-	ProductLauncher            ProductName = "launcher"
+	ProductAMQStreams             ProductName = "amqstreams"
+	ProductAMQOnline              ProductName = "amqonline"
+	ProductSolutionExplorer       ProductName = "solution-explorer"
+	ProductRHSSO                  ProductName = "rhsso"
+	ProductRHSSOUser              ProductName = "rhssouser"
+	ProductCodeReadyWorkspaces    ProductName = "codeready-workspaces"
+	ProductFuse                   ProductName = "fuse"
+	ProductFuseOnOpenshift        ProductName = "fuse-on-openshift"
+	Product3Scale                 ProductName = "3scale"
+	ProductNexus                  ProductName = "nexus"
+	ProductLauncher               ProductName = "launcher"
+	ProductMobileDeveloperConsole ProductName = "mobile-developer-console"
 
 	// PBrookes 08/08/2019:
 	// Could not find a way to determine these versions dynamically, so they are hard-coded
@@ -81,15 +77,15 @@ type InstallationStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
-	Stages           map[StageName]*InstallationStageStatus `json:"stages"`
+	Stages           map[string]*InstallationStageStatus `json:"stages"`
 	PreflightStatus  PreflightStatus
 	PreflightMessage string
 }
 
 type InstallationStageStatus struct {
-	Name     StageName                                  `json:"name"`
+	Name     string                                     `json:"name"`
 	Phase    StatusPhase                                `json:"phase"`
-	Products map[ProductName]*InstallationProductStatus `json:"products,omitempty"`
+	Products map[ProductName]*InstallationProductStatus `json:"products"`
 }
 
 type InstallationProductStatus struct {

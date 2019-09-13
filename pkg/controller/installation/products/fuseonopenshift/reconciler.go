@@ -1,4 +1,4 @@
-package fuseonopenshift
+	package fuseonopenshift
 
 import (
 	"context"

@@ -47,6 +47,7 @@ type ConfigReadWriter interface {
 	GetOperatorNamespace() string
 	ReadSolutionExplorer() (*SolutionExplorer, error)
 	ReadProduct(product v1alpha1.ProductName) (ConfigReadable, error)
+	ReadMobileDeveloperConsole() (*MobileDeveloperConsole, error)
 }
 
 //go:generate moq -out ConfigReadable_moq.go . ConfigReadable
@@ -86,6 +87,8 @@ func (m *Manager) ReadProduct(product v1alpha1.ProductName) (ConfigReadable, err
 		return m.ReadNexus()
 	case v1alpha1.ProductSolutionExplorer:
 		return m.ReadSolutionExplorer()
+	case v1alpha1.ProductMobileDeveloperConsole:
+		return m.ReadMobileDeveloperConsole()
 	}
 
 	return nil, errors2.New("no config found for product " + string(product))
@@ -177,6 +180,14 @@ func (m *Manager) ReadNexus() (*Nexus, error) {
 		return nil, err
 	}
 	return NewNexus(config), nil
+}
+
+func (m *Manager) ReadMobileDeveloperConsole() (*MobileDeveloperConsole, error) {
+	config, err := m.readConfigForProduct(v1alpha1.ProductNexus)
+	if err != nil {
+		return nil, err
+	}
+	return NewMobileDeveloperConsole(config), nil
 }
 
 func (m *Manager) ReadLauncher() (*Launcher, error) {

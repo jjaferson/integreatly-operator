@@ -9,6 +9,8 @@ import (
 	"github.com/integr8ly/integreatly-operator/pkg/resources"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/runtime"
+	pkgclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -56,4 +58,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, inst *v1alpha1.Installation,
 		return phase, err
 	}
 
+	r.logger.Infof("%s has reconciled successfully", r.Config.GetProductName())
+	return v1alpha1.PhaseCompleted, nil
+}
+
+func (r *Reconciler) GetPreflightObject(ns string) runtime.Object {
+	return nil
 }

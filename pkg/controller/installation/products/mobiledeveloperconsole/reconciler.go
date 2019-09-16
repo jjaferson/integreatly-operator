@@ -36,8 +36,10 @@ func NewReconciler(configManager config.ConfigReadWriter, instance *v1alpha1.Ins
 	if config.GetNamespace() == "" {
 		config.SetNamespace(instance.Spec.NamespacePrefix + defaultInstallationNamespace)
 	}
-	if err = config.Validate(); err != nil {
-		return nil, errors.Wrap(err, "nexus config is not valid")
+
+	err = config.Validate()
+	if err != nil {
+		return nil, errors.Wrap(err, "mdc config is not valid")
 	}
 
 	logger := logrus.WithFields(logrus.Fields{"product": config.GetProductName()})

@@ -15,7 +15,7 @@ import (
 
 const (
 	defaultInstallationNamespace = "mobile-developer-console"
-	defaultSubscriptionName      = "integreatly-mdc"
+	defaultSubscriptionName      = "integreatly-mobile-developer-console"
 	resourceName                 = "mobile-developer-console"
 )
 
@@ -60,10 +60,52 @@ func (r *Reconciler) Reconcile(ctx context.Context, inst *v1alpha1.Installation,
 		return phase, err
 	}
 
+	phase, err = r.ReconcileSubscription(ctx, inst, marketplace.Target{Pkg: defaultSubscriptionName, Channel: marketplace.IntegreatlyChannel, Namespace: r.Config.GetNamespace()}, client)
+	if err != nil || phase != v1alpha1.PhaseCompleted {
+		return phase, err
+	}
+
+	phase, err = r.reconcileCustomResource(ctx, client)
+	if err != nil || phase != v1alpha1.PhaseCompleted {
+		return phase, err
+	}
+
 	r.logger.Infof("%s has reconciled successfully", r.Config.GetProductName())
 	return v1alpha1.PhaseCompleted, nil
 }
 
 func (r *Reconciler) GetPreflightObject(ns string) runtime.Object {
 	return nil
+}
+
+func (r *Reconciler) reconcileCustomResource(ctx context.Context, client pkgclient.Client) (v1alpha1.StatusPhase, error) {
+	r.logger.Debug("reconciling mobile-developer-console custom resource")
+
+	cr := &mdc.MobileDeveloperConsole{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: r.Config.GetNamespace(),
+			Name:      resourceName,
+		},
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: nexus.SchemeGroupVersion.String(),
+			Kind:       nexus.NexusKind,
+		},
+		Spec: nexus.NexusSpec{
+			NexusVolumeSize:    "10Gi",
+			NexusSSL:           true,
+			NexusImageTag:      "latest",
+			NexusCPURequest:    1,
+			NexusCPULimit:      2,
+			NexusMemoryRequest: "2Gi",
+			NexusMemoryLimit:   "2Gi",
+		},
+	}
+
+	// attempt to create the custom resource
+	if err := client.Create(ctx, cr); err != nil && !k8serr.IsAlreadyExists(err) {
+		return v1alpha1.PhaseFailed, errors.Wrap(err, "failed to get or create a nexus custom resource")
+	}
+
+	// if there are no errors, the phase is complete
+	return v1alpha1.PhaseCompleted, nil
 }

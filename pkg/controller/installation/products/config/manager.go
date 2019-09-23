@@ -6,7 +6,6 @@ import (
 
 	"github.com/integr8ly/integreatly-operator/pkg/apis/integreatly/v1alpha1"
 	errors2 "github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -188,7 +187,6 @@ func (m *Manager) ReadMobileDeveloperConsole() (*MobileDeveloperConsole, error) 
 	if err != nil {
 		return nil, err
 	}
-	logrus.Info("config", config)
 	return NewMobileDeveloperConsole(config), nil
 }
 

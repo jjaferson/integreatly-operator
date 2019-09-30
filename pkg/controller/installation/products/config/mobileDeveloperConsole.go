@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/integr8ly/integreatly-operator/pkg/apis/integreatly/v1alpha1"
+	"github.com/sirupsen/logrus"
 )
 
 type MobileDeveloperConsole struct {
@@ -35,6 +36,7 @@ func (mdc *MobileDeveloperConsole) GetProductVersion() v1alpha1.ProductVersion {
 }
 
 func (mdc *MobileDeveloperConsole) GetHost() string {
+	logrus.Infof("host %s", mdc.config)
 	return mdc.config["HOST"]
 }
 

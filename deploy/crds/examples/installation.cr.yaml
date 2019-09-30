@@ -1,10 +1,11 @@
 apiVersion: integreatly.org/v1alpha1
 kind: Installation
 metadata:
-  name: mdc-installation
+  name: integreatly-installation
 spec:
   type: workshop
   namespacePrefix: integreatly-
   routingSubdomain: jmonteir.cloudservices.rhmw.io 
   masterUrl: https://console-openshift-console.apps.jmonteir.cloudservices.rhmw.io
   selfSignedCerts: true
+#

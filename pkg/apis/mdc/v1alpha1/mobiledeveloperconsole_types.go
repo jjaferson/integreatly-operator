@@ -13,7 +13,11 @@ type MobileDeveloperConsoleSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
+	OAuthClientID     string `json:"oAuthClientId,omitempty"`
+	OAuthClientSecret string `json:"oAuthClientSecret,omitempty"`
 }
+
+// "spec":{"oAuthClientId":"mobile-developer-console","oAuthClientSecret":"foobar"}}]'
 
 // MobileDeveloperConsoleStatus defines the observed state of MobileDeveloperConsole
 // +k8s:openapi-gen=true

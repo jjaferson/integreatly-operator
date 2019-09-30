@@ -15,5 +15,6 @@ var (
 	SchemeGroupVersion = schema.GroupVersion{Group: "mdc.aerogear.org", Version: "v1alpha1"}
 
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
-	SchemeBuilder = &scheme.Builder{GroupVersion: SchemeGroupVersion}
+	SchemeBuilder              = &scheme.Builder{GroupVersion: SchemeGroupVersion}
+	MobileDeveloperConsoleKind = "MobileDeveloperConsole"
 )

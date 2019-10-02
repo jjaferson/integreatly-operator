@@ -8,7 +8,6 @@ import (
 	"github.com/integr8ly/integreatly-operator/pkg/controller/installation/marketplace"
 	"github.com/integr8ly/integreatly-operator/pkg/controller/installation/products/config"
 	"github.com/integr8ly/integreatly-operator/pkg/resources"
-	routev1 "github.com/openshift/api/route/v1"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -20,10 +19,10 @@ import (
 )
 
 const (
-	defaultInstallationNamespace = "mobile-developer-console"
+	defaultInstallationNamespace = "mdc"
 	defaultSubscriptionName      = "integreatly-mobile-developer-console"
 	resourceName                 = "mobiledeveloperconsole"
-	mdcRouteName                 = "mobiledeveloperconsole"
+	mdcRouteName                 = "mobile-developer-console"
 )
 
 type Reconciler struct {
@@ -77,7 +76,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, inst *v1alpha1.Installation,
 		return phase, err
 	}
 
-	phase, err = r.reconcileCustomResource(ctx, client)
+	phase, err = r.reconcileCustomResource(ctx, client, inst)
 	if err != nil || phase != v1alpha1.PhaseCompleted {
 		return phase, err
 	}
@@ -85,20 +84,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, inst *v1alpha1.Installation,
 	phase, err = r.handleProgress(ctx, client)
 	if err != nil || phase != v1alpha1.PhaseCompleted {
 		return phase, err
-	}
-
-	if r.Config.GetHost() == "" {
-		mdcRoute := &routev1.Route{}
-		err = client.Get(ctx, pkgclient.ObjectKey{Name: mdcRouteName, Namespace: r.Config.GetNamespace()}, mdcRoute)
-		if err != nil {
-			return v1alpha1.PhaseFailed, errors.Wrap(err, "failed to get route for mdc")
-		}
-
-		r.Config.SetHost("https://" + mdcRoute.Spec.Host)
-		err = r.ConfigManager.WriteConfig(r.Config)
-		if err != nil {
-			return v1alpha1.PhaseFailed, errors.Wrap(err, "could not update mdc config")
-		}
 	}
 
 	product.Host = r.Config.GetHost()
@@ -112,7 +97,7 @@ func (r *Reconciler) GetPreflightObject(ns string) runtime.Object {
 	return nil
 }
 
-func (r *Reconciler) reconcileCustomResource(ctx context.Context, client pkgclient.Client) (v1alpha1.StatusPhase, error) {
+func (r *Reconciler) reconcileCustomResource(ctx context.Context, client pkgclient.Client, inst *v1alpha1.Installation) (v1alpha1.StatusPhase, error) {
 	r.logger.Info("reconciling mobile-developer-console custom resource")
 
 	cr := &mdc.MobileDeveloperConsole{

@@ -40,7 +40,7 @@ var (
 	Product3Scale                 ProductName = "3scale"
 	ProductNexus                  ProductName = "nexus"
 	ProductLauncher               ProductName = "launcher"
-	ProductMobileDeveloperConsole ProductName = "mobile-developer-console"
+	ProductMobileDeveloperConsole ProductName = "mdc"
 
 	// PBrookes 08/08/2019:
 	// Could not find a way to determine these versions dynamically, so they are hard-coded
@@ -51,7 +51,7 @@ var (
 	VersionFuseOnOpenshift        ProductVersion = "master"
 	VersionNexus                  ProductVersion = "3.16"
 	VersionLauncher               ProductVersion = "0.1.2"
-	VersionMobileDeveloperConsole ProductVersion = "0.1.2"
+	VersionMobileDeveloperConsole ProductVersion = "0.2.6"
 
 	PreflightInProgress PreflightStatus = ""
 	PreflightSuccess    PreflightStatus = "successful"

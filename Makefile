@@ -117,3 +117,5 @@ cluster/prepare/local: cluster/prepare
 	@oc create -f deploy/service_account.yaml
 	@oc create -f deploy/role.yaml
 	@oc create -f deploy/role_binding.yaml
+	@oc create -f https://github.com/aerogear/mobile-developer-console-operator/blob/0.2.6/deploy/role_binding.yaml
+	@oc create -f https://github.com/aerogear/mobile-developer-console-operator/blob/0.2.6/deploy/mobileclient_admin_role.yaml

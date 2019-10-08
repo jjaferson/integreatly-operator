@@ -76,7 +76,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, inst *v1alpha1.Installation,
 		return phase, err
 	}
 
-	phase, err = r.reconcileCustomResource(ctx, client, inst)
+	phase, err = r.reconcileCustomResource(ctx, client)
 	if err != nil || phase != v1alpha1.PhaseCompleted {
 		return phase, err
 	}
@@ -97,7 +97,7 @@ func (r *Reconciler) GetPreflightObject(ns string) runtime.Object {
 	return nil
 }
 
-func (r *Reconciler) reconcileCustomResource(ctx context.Context, client pkgclient.Client, inst *v1alpha1.Installation) (v1alpha1.StatusPhase, error) {
+func (r *Reconciler) reconcileCustomResource(ctx context.Context, client pkgclient.Client) (v1alpha1.StatusPhase, error) {
 	r.logger.Info("reconciling mobile-developer-console custom resource")
 
 	cr := &mdc.MobileDeveloperConsole{
@@ -131,6 +131,11 @@ func (r *Reconciler) handleProgress(ctx context.Context, client pkgclient.Client
 	err := client.List(ctx, &pkgclient.ListOptions{Namespace: r.Config.GetNamespace()}, pods)
 	if err != nil {
 		return v1alpha1.PhaseFailed, errors.Wrap(err, "failed to list mdc in mdc namespace")
+	}
+
+	// expecting 2 pods in total
+	if len(pods.Items) < 2 {
+		return v1alpha1.PhaseInProgress, nil
 	}
 
 	//and they should all be ready

@@ -8,4 +8,3 @@ spec:
   routingSubdomain: jmonteir.cloudservices.rhmw.io 
   masterUrl: https://console-openshift-console.apps.jmonteir.cloudservices.rhmw.io
   selfSignedCerts: true
-#

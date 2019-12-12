@@ -44,8 +44,6 @@ github.com/emicklei/go-restful
 github.com/emicklei/go-restful/log
 # github.com/evanphx/json-patch v4.5.0+incompatible
 github.com/evanphx/json-patch
-# github.com/fabric8-launcher/launcher-operator v0.1.2
-github.com/fabric8-launcher/launcher-operator/pkg/apis/launcher/v1alpha2
 # github.com/ghodss/yaml v1.0.1-0.20180820084758-c7ce16629ff4
 github.com/ghodss/yaml
 # github.com/go-logr/logr v0.1.0
@@ -139,6 +137,7 @@ github.com/openshift/api/image/v1
 github.com/openshift/api/oauth/v1
 github.com/openshift/api/operator/v1
 github.com/openshift/api/pkg/serialization
+github.com/openshift/api/project/v1
 github.com/openshift/api/route/v1
 github.com/openshift/api/template/v1
 github.com/openshift/api/user/v1

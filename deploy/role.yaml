@@ -388,3 +388,10 @@ rules:
       - servicemonitors
     verbs:
       - '*'
+  - apiGroups:
+      - ''
+      - project.openshift.io
+    resources:
+      - projectrequests
+    verbs:
+      - create

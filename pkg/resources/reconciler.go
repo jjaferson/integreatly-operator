@@ -8,6 +8,7 @@ import (
 	"github.com/integr8ly/integreatly-operator/pkg/controller/installation/marketplace"
 	productsConfig "github.com/integr8ly/integreatly-operator/pkg/controller/installation/products/config"
 	oauthv1 "github.com/openshift/api/oauth/v1"
+	projectv1 "github.com/openshift/api/project/v1"
 	operatorsv1alpha1 "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	"github.com/operator-framework/operator-lifecycle-manager/pkg/lib/ownerutil"
 	"github.com/pkg/errors"
@@ -61,8 +62,33 @@ func GetNS(ctx context.Context, namespace string, client pkgclient.Client) (*v1.
 	err := client.Get(ctx, pkgclient.ObjectKey{Name: ns.Name}, ns)
 	if err == nil {
 		// workaround for https://github.com/kubernetes/client-go/issues/541
-		ns.TypeMeta = metav1.TypeMeta{Kind: "Namespace", APIVersion: v1.SchemeGroupVersion.Version}
+		ns.TypeMeta = metav1.TypeMeta{Kind: "Project", APIVersion: projectv1.SchemeGroupVersion.Version}
 	}
+	return ns, err
+}
+
+func CreateNSWithProjectRequest(ctx context.Context, namespace string, client pkgclient.Client, inst *v1alpha1.Installation) (*v1.Namespace, error) {
+	projectRequest := &projectv1.ProjectRequest{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: namespace,
+		},
+	}
+	if err := client.Create(ctx, projectRequest); err != nil {
+		return nil, errors.Wrapf(err, "could not create ProjectRequest: %s", projectRequest.Name)
+	}
+
+	// when a namespace is created using the ProjectRequest object it drops labels and annotations
+	// so we need to retrieve the project as namespace and add them
+	ns, err := GetNS(ctx, namespace, client)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not retreive namespace: %s", ns.Name)
+	}
+
+	PrepareObject(ns, inst)
+	if err := client.Update(ctx, ns); err != nil {
+		return nil, errors.Wrap(err, "failed to update the ns definition ")
+	}
+
 	return ns, err
 }
 
@@ -72,10 +98,12 @@ func (r *Reconciler) ReconcileNamespace(ctx context.Context, namespace string, i
 		if !k8serr.IsNotFound(err) {
 			return v1alpha1.PhaseFailed, errors.Wrapf(err, "could not retrieve namespace: %s", ns.Name)
 		}
-		PrepareObject(ns, inst)
-		if err = client.Create(ctx, ns); err != nil {
-			return v1alpha1.PhaseFailed, errors.Wrapf(err, "could not create namespace: %s", ns.Name)
+
+		ns, err = CreateNSWithProjectRequest(ctx, namespace, client, inst)
+		if err != nil {
+			return v1alpha1.PhaseFailed, errors.Wrapf(err, "failed to create namespace %s", ns.Name)
 		}
+
 		return v1alpha1.PhaseCompleted, nil
 	}
 	// ns exists so check it is our namespace

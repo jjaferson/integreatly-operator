@@ -90,8 +90,7 @@ func reconcileClusterRole(ctx context.Context, serverClient pkgclient.Client, co
 			},
 		},
 	}
-	ref := metav1.NewControllerRef(owner, owner.GetObjectKind().GroupVersionKind())
-	backupJobsClusterRole.OwnerReferences = append(backupJobsClusterRole.OwnerReferences, *ref)
+
 	return CreateOrUpdate(ctx, serverClient, backupJobsClusterRole)
 }
 
@@ -124,8 +123,6 @@ func reconcileClusterRoleBinding(ctx context.Context, serverClient pkgclient.Cli
 		},
 	}
 
-	ref := metav1.NewControllerRef(owner, owner.GetObjectKind().GroupVersionKind())
-	backupJobsRoleBinding.OwnerReferences = append(backupJobsRoleBinding.OwnerReferences, *ref)
 	return CreateOrUpdate(ctx, serverClient, backupJobsRoleBinding)
 }
 

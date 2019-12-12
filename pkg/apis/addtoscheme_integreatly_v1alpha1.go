@@ -23,6 +23,7 @@ import (
 	templatev1 "github.com/openshift/api/template/v1"
 	samplesv1 "github.com/openshift/cluster-samples-operator/pkg/apis/samples/v1"
 
+	projectv1 "github.com/openshift/api/project/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	usersv1 "github.com/openshift/api/user/v1"
 	operatorsv1 "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1"
@@ -67,5 +68,6 @@ func init() {
 		samplesv1.SchemeBuilder.AddToScheme,
 		upsv1alpha1.SchemeBuilder.AddToScheme,
 		prometheusmonitoringv1.SchemeBuilder.AddToScheme,
+		projectv1.AddToScheme,
 	)
 }

@@ -95,14 +95,10 @@ test/e2e/prow: export INTEGREATLY_OPERATOR_IMAGE := "registry.svc.ci.openshift.o
 test/e2e/prow: test/e2e
 
 .PHONY: test/e2e
-test/e2e: export GH_CLIENT_ID := 1234
-test/e2e: export GH_CLIENT_SECRET := 1234
 test/e2e: cluster/cleanup cluster/cleanup/crds cluster/prepare cluster/prepare/configmaps cluster/prepare/crd deploy/integreatly-installation-cr.yml
 	operator-sdk --verbose test local ./test/e2e --namespace="$(NAMESPACE)" --go-test-flags "-timeout=60m" --debug --image=$(INTEGREATLY_OPERATOR_IMAGE)
 
 .PHONY: test/e2e/olm
-test/e2e/olm: export GH_CLIENT_ID := 1234
-test/e2e/olm: export GH_CLIENT_SECRET := 1234
 test/e2e/olm: cluster/cleanup/olm cluster/prepare/olm cluster/prepare/configmaps cluster/deploy/integreatly-installation-cr.yml
 
 .PHONY: cluster/deploy/integreatly-installation-cr.yml
@@ -123,11 +119,11 @@ cluster/prepare/project:
 	@oc label namespace $(NAMESPACE) monitoring-key=middleware
 	@oc project $(NAMESPACE)
 
-.PHONY: cluster/prepare/secrets
-cluster/prepare/secrets:
-	@oc create secret generic github-oauth-secret \
-		--from-literal=clientId=$(GH_CLIENT_ID) \
-		--from-literal=secret=$(GH_CLIENT_SECRET)
+# .PHONY: cluster/prepare/secrets
+# cluster/prepare/secrets:
+# 	@oc create secret generic github-oauth-secret \
+# 		--from-literal=clientId=$(GH_CLIENT_ID) \
+# 		--from-literal=secret=$(GH_CLIENT_SECRET)
 
 .PHONY: cluster/prepare/configmaps
 cluster/prepare/configmaps:
@@ -142,7 +138,7 @@ cluster/prepare/crd:
 	- oc create -f deploy/crds/*_crd.yaml
 
 .PHONY: cluster/prepare/local
-cluster/prepare/local: cluster/prepare/project cluster/prepare/secrets cluster/prepare/crd
+cluster/prepare/local: cluster/prepare/project cluster/prepare/crd
 	@oc create -f deploy/service_account.yaml
 	@oc create -f deploy/role.yaml
 	@oc create -f deploy/role_binding.yaml

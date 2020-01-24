@@ -468,7 +468,7 @@ func (r *Reconciler) reconcileComponents(ctx context.Context, installation *inte
 			return errors.Wrap(err, "failed to setup Openshift IDP")
 		}
 
-		err = r.setupGithubIDP(ctx, kcr, serverClient)
+		err = r.setupGithubIDP(ctx, kcr, serverClient, installation)
 		if err != nil {
 			return errors.Wrap(err, "failed to setup Github IDP")
 		}
@@ -647,13 +647,21 @@ func (r *Reconciler) reconcileBlackboxTargets(ctx context.Context, installation 
 	return integreatlyv1alpha1.PhaseCompleted, nil
 }
 
-func (r *Reconciler) setupGithubIDP(ctx context.Context, kcr *keycloak.KeycloakRealm, serverClient k8sclient.Client) error {
+func (r *Reconciler) setupGithubIDP(ctx context.Context, kcr *keycloak.KeycloakRealm, serverClient k8sclient.Client, installation *integreatlyv1alpha1.Installation) error {
 	githubCreds := &corev1.Secret{}
-	err := serverClient.Get(ctx, k8sclient.ObjectKey{Name: githubOauthAppCredentialsSecretName, Namespace: r.ConfigManager.GetOperatorNamespace()}, githubCreds)
+	err := serverClient.Get(ctx, k8sclient.ObjectKey{Name: r.ConfigManager.GetGHOauthClientsSecretName(), Namespace: r.ConfigManager.GetOperatorNamespace()}, githubCreds)
 	if err != nil {
 		logrus.Errorf("Unable to find Github oauth credentials secret in namespace %s", r.ConfigManager.GetOperatorNamespace())
 		return err
 	}
+
+	// check if gh credentials have been set up
+	githubMockCred := "dummy"
+	if string(githubCreds.Data["clientId"]) == githubMockCred || string(githubCreds.Data["secret"]) == githubMockCred {
+		return nil
+	}
+
+	installation.Status.SetupGHCredentials = true
 
 	if !containsIdentityProvider(kcr.Spec.Realm.IdentityProviders, githubIdpAlias) {
 		logrus.Infof("Adding github identity provider to the keycloak realm")
@@ -678,6 +686,13 @@ func (r *Reconciler) setupGithubIDP(ctx context.Context, kcr *keycloak.KeycloakR
 				"useJwksUrl":      "true",
 			},
 		})
+	} else {
+		logrus.Infof("Syncing github identity provider to the keycloak realm")
+		kcr.Spec.Realm.IdentityProviders, err = synchronizeGHOauthSecret(kcr.Spec.Realm.IdentityProviders, githubCreds)
+		if err != nil {
+			logrus.Error("Unable to sync Github oauth credentials with secret")
+			return err
+		}
 	}
 	// We need to revisit how the github idp gets created/updated
 	// client ID and secret can get outdated we need to ensure they are synced with the value secret in the github-oauth-secret
@@ -835,4 +850,35 @@ func GetInstanceLabels() map[string]string {
 	return map[string]string{
 		SSOLabelKey: SSOLabelValue,
 	}
+}
+
+func synchronizeGHOauthSecret(providers []*keycloak.KeycloakIdentityProvider, githubCreds *corev1.Secret) ([]*keycloak.KeycloakIdentityProvider, error) {
+
+	index, provider := GetProvider(providers, githubIdpAlias)
+	if index == -1 {
+		return nil, fmt.Errorf("Keycloak Identity Provider %s not found", githubIdpAlias)
+	}
+
+	githubClientID := string(githubCreds.Data["clientId"])
+	if provider.Config["clientId"] != githubClientID {
+		providers[index].Config["clientId"] = githubClientID
+	}
+
+	githubClientSecret := string(githubCreds.Data["secret"])
+	if provider.Config["clientSecret"] != githubClientSecret {
+		providers[index].Config["clientSecret"] = githubClientSecret
+	}
+
+	return providers, nil
+}
+
+func GetProvider(providers []*keycloak.KeycloakIdentityProvider, alias string) (int, keycloak.KeycloakIdentityProvider) {
+	provider := keycloak.KeycloakIdentityProvider{}
+
+	for index, p := range providers {
+		if p.Alias == alias {
+			return index, *p
+		}
+	}
+	return -1, provider
 }

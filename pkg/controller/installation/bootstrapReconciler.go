@@ -16,6 +16,7 @@ import (
 
 	oauthv1 "github.com/openshift/api/oauth/v1"
 	routev1 "github.com/openshift/api/route/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 
 	corev1 "k8s.io/api/core/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
@@ -54,6 +55,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, installation *integreatlyv1a
 	phase, err := r.reconcileOauthSecrets(ctx, serverClient)
 	if err != nil || phase != integreatlyv1alpha1.PhaseCompleted {
 		events.HandleError(r.recorder, installation, phase, "Failed to reconcile oauth secrets", err)
+		return phase, err
+	}
+
+	phase, err = r.reconcilerGithubOauthSecret(ctx, serverClient)
+	if err != nil || phase != integreatlyv1alpha1.PhaseCompleted {
+		events.HandleError(r.recorder, installation, phase, "Failed to reconcile github oauth secrets", err)
 		return phase, err
 	}
 
@@ -128,7 +135,7 @@ func (r *Reconciler) retrieveConsoleUrlAndSubdomain(ctx context.Context, serverC
 		if k8serr.IsNotFound(err) {
 			return integreatlyv1alpha1.PhaseFailed, fmt.Errorf("could not find CR route: %w", err)
 		}
-		return integreatlyv1alpha1.PhaseFailed, fmt.Errorf("could not retrieve CR route: %w", err)
+		return integreatlyv1alpha1.PhaseFailed, fmt.Errorf("could not retrieve aa test CR route: %w", err)
 	}
 
 	r.installation.Spec.MasterURL = consoleRouteCR.Status.Ingress[0].Host
@@ -156,6 +163,79 @@ func getConsoleRouteCR(ctx context.Context, serverClient k8sclient.Client) (*rou
 		return nil, err
 	}
 	return consoleRouteCR, nil
+}
+
+func (r *Reconciler) reconcilerGithubOauthSecret(ctx context.Context, serverClient k8sclient.Client) (integreatlyv1alpha1.StatusPhase, error) {
+
+	githubOauthSecretCR := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      r.ConfigManager.GetGHOauthClientsSecretName(),
+			Namespace: r.ConfigManager.GetOperatorNamespace(),
+		},
+	}
+
+	err := serverClient.Get(ctx, k8sclient.ObjectKey{Name: githubOauthSecretCR.Name, Namespace: githubOauthSecretCR.Namespace}, githubOauthSecretCR)
+	if !k8serr.IsNotFound(err) && err != nil {
+		return integreatlyv1alpha1.PhaseFailed, err
+	} else if k8serr.IsNotFound(err) {
+		githubOauthSecretCR.Data = map[string][]byte{
+			"clientId": []byte("dummy"),
+			"secret":   []byte("dummy"),
+		}
+	}
+	githubOauthSecretCR.ObjectMeta.ResourceVersion = ""
+
+	err = resources.CreateOrUpdate(ctx, serverClient, githubOauthSecretCR)
+	if err != nil {
+		return integreatlyv1alpha1.PhaseFailed, fmt.Errorf("Error reconciling Github OAuth secrets: %w", err)
+	}
+	logrus.Info("Bootstrap Github OAuth secrets successfully reconciled")
+
+	secretRoleCR := &rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      r.ConfigManager.GetGHOauthClientsSecretName(),
+			Namespace: r.ConfigManager.GetOperatorNamespace(),
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups:     []string{""},
+				Resources:     []string{"secrets"},
+				Verbs:         []string{"update", "get"},
+				ResourceNames: []string{r.ConfigManager.GetGHOauthClientsSecretName()},
+			},
+		},
+	}
+
+	err = resources.CreateOrUpdate(ctx, serverClient, secretRoleCR)
+	if err != nil {
+		return integreatlyv1alpha1.PhaseFailed, fmt.Errorf("Error creating Github OAuth secrets role: %w", err)
+	}
+
+	secretRoleBindingCR := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      r.ConfigManager.GetGHOauthClientsSecretName(),
+			Namespace: r.ConfigManager.GetOperatorNamespace(),
+		},
+		RoleRef: rbacv1.RoleRef{
+			Name: secretRoleCR.GetName(),
+			Kind: "Role",
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Name: "dedicated-admins",
+				Kind: "Group",
+			},
+		},
+	}
+
+	err = resources.CreateOrUpdate(ctx, serverClient, secretRoleBindingCR)
+	if err != nil {
+		return integreatlyv1alpha1.PhaseFailed, fmt.Errorf("Error creating Github OAuth secrets role binding: %w", err)
+	}
+	logrus.Info("Bootstrap Github OAuth secrets Role and Role Binding successfully reconciled")
+
+	return integreatlyv1alpha1.PhaseCompleted, nil
+
 }
 
 func generateSecret(length int) string {

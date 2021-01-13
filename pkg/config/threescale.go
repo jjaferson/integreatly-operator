@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+
 	"github.com/integr8ly/integreatly-operator/test/resources"
 
 	threescaleapps "github.com/3scale/3scale-operator/pkg/apis/apps"
@@ -9,7 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	integreatlyv1alpha1 "github.com/integr8ly/integreatly-operator/apis/rhmi/v1alpha1"
+	integreatlyv1alpha1 "github.com/integr8ly/integreatly-operator/apis/v1alpha1"
 )
 
 type ThreeScale struct {

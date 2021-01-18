@@ -578,7 +578,6 @@ github.com/golang/snappy v0.0.1/go.mod h1:/XxbfmMg8lxefKM7IXC3fBNl/7bRcc72aCRzEW
 github.com/golangplus/bytes v0.0.0-20160111154220-45c989fe5450/go.mod h1:Bk6SMAONeMXrxql8uvOKuAZSu8aM5RUGv+1C6IJaEho=
 github.com/golangplus/fmt v0.0.0-20150411045040-2a5d6d7d2995/go.mod h1:lJgMEyOkYFkPcDKwRXegd+iM6E7matEszMG5HhwytU8=
 github.com/golangplus/testing v0.0.0-20180327235837-af21d9c3145e/go.mod h1:0AA//k/eakGydO4jKRoRL2j92ZKSzTgj9tclaCrvXHk=
-github.com/gomodule/redigo v2.0.0+incompatible/go.mod h1:B4C85qUVwatsJoIUNIfCRsp7qO0iAmpGFZ4EELWSbC4=
 github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c/go.mod h1:lNA+9X1NB3Zf8V7Ke586lFgjr2dZNuvo3lPJSGZ5JPQ=
 github.com/google/btree v1.0.0/go.mod h1:lNA+9X1NB3Zf8V7Ke586lFgjr2dZNuvo3lPJSGZ5JPQ=
 github.com/google/flatbuffers v1.11.0/go.mod h1:1AeVuKshWv4vARoZatz6mlQ0JxURH0Kv5+zNeJKJCa8=
@@ -732,6 +731,8 @@ github.com/influxdata/tdigest v0.0.0-20181121200506-bf2b5ad3c0a9/go.mod h1:Js0mq
 github.com/influxdata/usage-client v0.0.0-20160829180054-6d3895376368/go.mod h1:Wbbw6tYNvwa5dlB6304Sd+82Z3f7PmVZHVKU637d4po=
 github.com/integr8ly/application-monitoring-operator v1.4.0 h1:0QXO9M0ztJRnUeGXtOhPX5c7Qv3n7dr+s9tQEni2CWQ=
 github.com/integr8ly/application-monitoring-operator v1.4.0/go.mod h1:bC4f/eZfXeB2vCJP2iZnWYDm/znUcsETOYHpHZJIMsE=
+github.com/integr8ly/cloud-resource-operator v0.23.1-0.20210118104111-b5c5799f313c h1:ZqRuuEL7TCimsaRs5ZYtRBIUNirvRSFyo9MwgeHPjq4=
+github.com/integr8ly/cloud-resource-operator v0.23.1-0.20210118104111-b5c5799f313c/go.mod h1:bsA5pp5yToZRG6tOF1Ov4UfpoeAsmCRRBZoo1Ww3b4o=
 github.com/integr8ly/grafana-operator v2.0.0+incompatible h1:wSqKpcr5wE6pws35iJeOYGVBMJbSNEhcE6hlD0zF9NU=
 github.com/integr8ly/grafana-operator v2.0.0+incompatible/go.mod h1:uFZI5IG74KBTtqzdwAMvoFoAC3RlgF5VaJypcCzyVVs=
 github.com/integr8ly/grafana-operator/v3 v3.0.2-0.20200103111057-03d7fa884db4/go.mod h1:0WBJ5MjgAgIu9briw0EaDkpXsWIXMoRJKnE/J024+bM=

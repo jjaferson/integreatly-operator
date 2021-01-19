@@ -79,12 +79,10 @@ const (
 	externalRedisSecretName        = "system-redis"
 	externalBackendRedisSecretName = "backend-redis"
 	externalPostgresSecretName     = "system-database"
-
-	numberOfReplicas              int64 = 2
-	apicastStagingName                  = "apicast-staging"
-	apicastProductionName               = "apicast-production"
-	systemSeedSecretName                = "system-seed"
-	systemMasterApiCastSecretName       = "system-master-apicast"
+	apicastStagingName             = "apicast-staging"
+	apicastProductionName          = "apicast-production"
+	systemSeedSecretName           = "system-seed"
+	systemMasterApiCastSecretName  = "system-master-apicast"
 
 	apicastRatelimiting = "apicast-ratelimit"
 	registrySecretName  = "threescale-registry-auth"
@@ -871,12 +869,12 @@ func (r *Reconciler) reconcileSMTPCredentials(ctx context.Context, serverClient 
 		}
 
 		if smtpUpdated {
-			err = r.RolloutDeployment("system-app")
+			err = r.RolloutDeployment(ctx, "system-app")
 			if err != nil {
 				logrus.Error(err)
 			}
 
-			err = r.RolloutDeployment("system-sidekiq")
+			err = r.RolloutDeployment(ctx, "system-sidekiq")
 			if err != nil {
 				logrus.Error(err)
 			}
@@ -1619,13 +1617,13 @@ func (r *Reconciler) reconcileServiceDiscovery(ctx context.Context, serverClient
 	}
 
 	if status != controllerutil.OperationResultNone {
-		err = r.RolloutDeployment("system-app")
+		err = r.RolloutDeployment(ctx, "system-app")
 		if err != nil {
 			logrus.Errorf("Failed to rollout deployment (system-app): %v", err)
 			return integreatlyv1alpha1.PhaseInProgress, err
 		}
 
-		err = r.RolloutDeployment("system-sidekiq")
+		err = r.RolloutDeployment(ctx, "system-sidekiq")
 		if err != nil {
 			logrus.Errorf("Failed to rollout deployment (system-sidekiq): %v", err)
 			return integreatlyv1alpha1.PhaseInProgress, err
@@ -1772,12 +1770,12 @@ func (r *Reconciler) GetAdminToken(ctx context.Context, serverClient k8sclient.C
 	return &accessToken, nil
 }
 
-func (r *Reconciler) RolloutDeployment(name string) error {
-	_, err := r.appsv1Client.DeploymentConfigs(r.Config.GetNamespace()).Instantiate(name, &appsv1.DeploymentRequest{
+func (r *Reconciler) RolloutDeployment(ctx context.Context, name string) error {
+	_, err := r.appsv1Client.DeploymentConfigs(r.Config.GetNamespace()).Instantiate(ctx, name, &appsv1.DeploymentRequest{
 		Name:   name,
 		Force:  true,
 		Latest: true,
-	})
+	}, metav1.CreateOptions{})
 
 	return err
 }
@@ -1831,6 +1829,8 @@ func userIsOpenshiftAdmin(tsUser *User, adminGroup *usersv1.Group) bool {
 }
 
 func (r *Reconciler) getKeycloakClientSpec(id, clientSecret string) keycloak.KeycloakClientSpec {
+	fullScopeAllowed := true
+
 	return keycloak.KeycloakClientSpec{
 		RealmSelector: &metav1.LabelSelector{
 			MatchLabels: rhsso.GetInstanceLabels(),
@@ -1846,7 +1846,7 @@ func (r *Reconciler) getKeycloakClientSpec(id, clientSecret string) keycloak.Key
 			},
 			StandardFlowEnabled: true,
 			RootURL:             fmt.Sprintf("https://3scale-admin.%s", r.installation.Spec.RoutingSubdomain),
-			FullScopeAllowed:    true,
+			FullScopeAllowed:    &fullScopeAllowed,
 			Access: map[string]bool{
 				"view":      true,
 				"configure": true,

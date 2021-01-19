@@ -45,7 +45,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
-	utilruntime.Must(rhmiv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(rhmiv1alpha1.AddToSchemes.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 

@@ -25,6 +25,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/integr8ly/integreatly-operator/pkg/resources/poddistribution"
+
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -98,8 +100,106 @@ func New(mgr ctrl.Manager) *RHMIReconciler {
 	}
 }
 
+// ClusterRole permissions
+
+// +kubebuilder:rbac:groups=integreatly.org;applicationmonitoring.integreatly.org,resources=*,verbs=*
 // +kubebuilder:rbac:groups=integreatly.org,resources=rhmis,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=integreatly.org,resources=rhmis/status,verbs=get;update;patch
+
+// We need to create consolelinks which are cluster level objects
+// +kubebuilder:rbac:groups=console.openshift.io,resources=consolelinks,verbs=get;create;update;delete
+
+// We are using ProjectRequests API to create namespaces where we automatically become admins
+// +kubebuilder:rbac:groups="";project.openshift.io,resources=projectrequests,verbs=create
+
+// Preflight check for existing installations of products
+// +kubebuilder:rbac:groups="",resources=namespaces,verbs=list;get;watch
+// +kubebuilder:rbac:groups=apps,resources=deployments;statefulsets,verbs=list;get;watch
+// +kubebuilder:rbac:groups=apps.openshift.io,resources=deploymentconfigs,verbs=list;get;watch
+
+// We need to get console route for solution explorer
+// +kubebuilder:rbac:groups=route.openshift.io,resources=routes,verbs=get
+
+// Reconciling Fuse templates and image streams
+// +kubebuilder:rbac:groups=template.openshift.io,resources=templates,verbs=get;create;update;delete
+// +kubebuilder:rbac:groups=image.openshift.io,resources=imagestreams,verbs=get;create;update;delete
+
+// Registry pull secret needs to be read to be then copied into some RHMI namespaces
+// +kubebuilder:rbac:groups="",resources=secrets;,verbs=get,resourceNames=pull-secret
+
+// We need to read this Secret from openshift-monitoring namespace in order to setup our monitoring stack
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=get,resourceNames=grafana-datasources
+
+// OAuthClients are used for login into products with OpenShift User identity
+// +kubebuilder:rbac:groups=oauth.openshift.io,resources=oauthclients,verbs=create;get;update;delete
+
+// Updating the samples operator config cr to ignore fuse imagestreams and templates
+// +kubebuilder:rbac:groups=samples.operator.openshift.io,resources=configs,verbs=get;update,resourceNames=cluster
+
+// Permissions needed for our namespaces, but not given by "admin" role
+// - Namespace update permissions are needed for setting labels
+// +kubebuilder:rbac:groups="",resources=namespaces,verbs=update
+// - Installation of product operators
+// +kubebuilder:rbac:groups=operators.coreos.com,resources=catalogsources;operatorgroups,verbs=create;list;get
+// +kubebuilder:rbac:groups=operators.coreos.com,resources=catalogsources,verbs=update,resourceNames=rhmi-registry-cs
+// +kubebuilder:rbac:groups=operators.coreos.com,resources=installplans,verbs=update
+
+// Monitoring resources not covered by namespace "admin" permissions
+// +kubebuilder:rbac:groups=monitoring.coreos.com,resources=prometheusrules;servicemonitors,verbs=get;list;create;update;delete
+
+// Adding a rolebinding to the monitoring federation namespace
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=rolebindings,verbs=get;list;create;update;delete
+
+// Permission to fetch identity to get email for created Keycloak users in openshift realm
+// +kubebuilder:rbac:groups=user.openshift.io,resources=identities,verbs=get
+
+// Permission to manage ValidatingWebhookConfiguration CRs pointing to the webhook server
+// +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=validatingwebhookconfigurations;mutatingwebhookconfigurations,verbs=get;watch;list;create;update;delete
+
+// Permission to get the ConfigMap that embeds the CSV for an InstallPlan
+// +kubebuilder:rbac:groups="",resources=configmaps,verbs=get
+
+// Permission for marin3r resources
+// +kubebuilder:rbac:groups=marin3r.3scale.net,resources=envoyconfigs,verbs=get;list;watch;create;update;delete
+// +kubebuilder:rbac:groups=operator.marin3r.3scale.net,resources=discoveryservices,verbs=get;list;watch;create;update;delete
+
+// +kubebuilder:rbac:groups=scheduling.k8s.io,resources=*,verbs=*
+
+// Permission to list nodes in order to determine if a cluster is multi-az
+// +kubebuilder:rbac:groups="",resources=nodes,verbs=list
+
+// Permission to get cluster infrastructure details for alerting
+// +kubebuilder:rbac:groups=config.openshift.io,resources=infrastructures,verbs=get
+
+// Role permissions
+
+// +kubebuilder:rbac:groups="",resources=pods;events;configmaps;secrets,verbs=list;get;watch;create;update;patch,namespace=redhat-rhmi-operator
+// +kubebuilder:rbac:groups="",resources=pods;events;configmaps;secrets,verbs=list;get;watch;create;update;patch,namespace=redhat-rhoam-operator
+
+// +kubebuilder:rbac:groups="",resources=configmaps,verbs=delete,namespace=redhat-rhoam-operator
+// +kubebuilder:rbac:groups="",resources=configmaps,verbs=delete,namespace=redhat-rhmi-operator
+
+// +kubebuilder:rbac:groups="",resources=services;services/finalizers,verbs=get;create;list;watch;update;delete,namespace=redhat-rhoam-operator
+// +kubebuilder:rbac:groups="",resources=services;services/finalizers,verbs=get;create;list;watch;update;delete,namespace=redhat-rhmi-operator
+
+// +kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=get;create,namespace=redhat-rhoam-operator
+// +kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=get;create,namespace=redhat-rhmi-operator
+
+// +kubebuilder:rbac:groups=apps,resources=deployments/finalizers;replicasets;statefulsets,verbs=update;get,namespace=redhat-rhoam-operator
+// +kubebuilder:rbac:groups=apps,resources=deployments/finalizers;replicasets;statefulsets,verbs=update;get,namespace=redhat-rhmi-operator
+
+// +kubebuilder:rbac:groups=monitoring.coreos.com,resources=prometheusrules,verbs=get;list;create;update;delete;watch,namespace=redhat-rhoam-operator
+// +kubebuilder:rbac:groups=monitoring.coreos.com,resources=prometheusrules,verbs=get;list;create;update;delete;watch,namespace=redhat-rhmi-operator
+
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings,verbs=get;list;create;update;delete;watch,namespace=redhat-rhoam-operator
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings,verbs=get;list;create;update;delete;watch,namespace=redhat-rhmi-operator
+
+// +kubebuilder:rbac:groups="",resources=pods;services;endpoints,verbs=get;list;watch,namespace=redhat-rhoam-operator
+// +kubebuilder:rbac:groups="",resources=pods;services;endpoints,verbs=get;list;watch,namespace=redhat-rhmi-operator
+
+// +kubebuilder:rbac:groups=marin3r.3scale.net,resources=envoyconfigs,verbs=get;list;watch;create;update;delete,namespace=redhat-rhoam-operator
+
+// +kubebuilder:rbac:groups=operator.marin3r.3scale.net,resources=discoveryservices,verbs=get;list;watch;create;update;delete,namespace=redhat-rhoam-operator
 
 func (r *RHMIReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
@@ -225,7 +325,9 @@ func (r *RHMIReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 		metrics.SetRhmiVersions(string(installation.Status.Stage), installation.Status.Version, installation.Status.ToVersion, installation.CreationTimestamp.Unix())
 	}
 
-	alertsClient, err := k8sclient.New(r.mgr.GetConfig(), k8sclient.Options{})
+	alertsClient, err := k8sclient.New(r.mgr.GetConfig(), k8sclient.Options{
+		Scheme: r.mgr.GetScheme(),
+	})
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("error creating client for alerts: %v", err)
 	}
@@ -281,13 +383,29 @@ func (r *RHMIReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 		installation.Status.Stage = rhmiv1alpha1.StageName("complete")
 		metrics.RHMIStatusAvailable.Set(1)
 		retryRequeue.RequeueAfter = 5 * time.Minute
+		if installation.Spec.RebalancePods {
+			r.reconcilePodDistribution(installation)
+		}
 	}
 	metrics.SetRHMIStatus(installation)
 
 	err = r.updateStatusAndObject(log, originalInstallation, installation)
 	return retryRequeue, err
+}
 
-	return ctrl.Result{}, nil
+func (r *RHMIReconciler) reconcilePodDistribution(installation *rhmiv1alpha1.RHMI) {
+
+	serverClient, err := k8sclient.New(r.restConfig, k8sclient.Options{})
+	if err != nil {
+		logrus.Errorf("Error getting server client for pod distribution %v", err.Error())
+		installation.Status.LastError = err.Error()
+		return
+	}
+	mErr := poddistribution.ReconcilePodDistribution(context.TODO(), serverClient, installation.Spec.NamespacePrefix, installation.Spec.Type)
+	if mErr != nil && len(mErr.Errors) > 0 {
+		logrus.Errorf("Error reconciling pod distributions %v", mErr)
+		installation.Status.LastError = mErr.Error()
+	}
 }
 
 func (r *RHMIReconciler) updateStatusAndObject(log logr.Logger, original, installation *rhmiv1alpha1.RHMI) error {
@@ -360,7 +478,7 @@ func (r *RHMIReconciler) handleUninstall(log logr.Logger, installation *rhmiv1al
 	metrics.SetRHMIStatus(installation)
 
 	// Clean up the products which have finalizers associated to them
-	merr := &multiErr{}
+	merr := &resources.MultiErr{}
 	finalizers := []string{}
 	for _, finalizer := range installation.Finalizers {
 		finalizers = append(finalizers, finalizer)
@@ -380,7 +498,9 @@ func (r *RHMIReconciler) handleUninstall(log logr.Logger, installation *rhmiv1al
 				if err != nil {
 					merr.Add(fmt.Errorf("Failed to build reconciler for product %s: %w", productName, err))
 				}
-				serverClient, err := k8sclient.New(r.restConfig, k8sclient.Options{})
+				serverClient, err := k8sclient.New(r.restConfig, k8sclient.Options{
+					Scheme: r.mgr.GetScheme(),
+				})
 				if err != nil {
 					merr.Add(fmt.Errorf("Failed to create server client for %s: %w", productName, err))
 				}
@@ -397,7 +517,7 @@ func (r *RHMIReconciler) handleUninstall(log logr.Logger, installation *rhmiv1al
 		//don't move to next stage until all products in this stage are removed
 		//update CR and return
 		if pendingUninstalls {
-			if len(merr.errors) > 0 {
+			if len(merr.Errors) > 0 {
 				installation.Status.LastError = merr.Error()
 				r.Client.Status().Update(context.TODO(), installation)
 			}
@@ -484,6 +604,12 @@ func (r *RHMIReconciler) preflightChecks(log logr.Logger, installation *rhmiv1al
 			_, err := strconv.ParseBool(s)
 			return err
 		}),
+		rhmiv1alpha1.EnvKeyAlertSMTPFrom: requiredEnvVar(func(s string) error {
+			if s == "" {
+				return fmt.Errorf(" env var %s is required ", rhmiv1alpha1.EnvKeyAlertSMTPFrom)
+			}
+			return nil
+		}),
 	}); err != nil {
 		return result, err
 	}
@@ -569,7 +695,9 @@ func (r *RHMIReconciler) checkNamespaceForProducts(log logr.Logger, ns corev1.Na
 		return foundProducts, nil
 	}
 	// new client to avoid caching issues
-	serverClient, _ := k8sclient.New(r.restConfig, k8sclient.Options{})
+	serverClient, _ := k8sclient.New(r.restConfig, k8sclient.Options{
+		Scheme: r.mgr.GetScheme(),
+	})
 	for _, stage := range installationType.InstallStages {
 		for _, product := range stage.Products {
 			reconciler, err := products.NewReconciler(product.Name, r.restConfig, configManager, installation, r.mgr)
@@ -600,7 +728,9 @@ func (r *RHMIReconciler) bootstrapStage(installation *rhmiv1alpha1.RHMI, configM
 	if err != nil {
 		return rhmiv1alpha1.PhaseFailed, fmt.Errorf("failed to build a reconciler for Bootstrap: %w", err)
 	}
-	serverClient, err := k8sclient.New(r.restConfig, k8sclient.Options{})
+	serverClient, err := k8sclient.New(r.restConfig, k8sclient.Options{
+		Scheme: r.mgr.GetScheme(),
+	})
 	if err != nil {
 		return rhmiv1alpha1.PhaseFailed, fmt.Errorf("could not create server client: %w", err)
 	}
@@ -630,7 +760,9 @@ func (r *RHMIReconciler) processStage(installation *rhmiv1alpha1.RHMI, stage *St
 			productVersionMismatchFound = true
 		}
 
-		serverClient, err := k8sclient.New(r.restConfig, k8sclient.Options{})
+		serverClient, err := k8sclient.New(r.restConfig, k8sclient.Options{
+			Scheme: r.mgr.GetScheme(),
+		})
 		if err != nil {
 			return rhmiv1alpha1.PhaseFailed, fmt.Errorf("could not create server client: %w", err)
 		}
@@ -638,9 +770,9 @@ func (r *RHMIReconciler) processStage(installation *rhmiv1alpha1.RHMI, stage *St
 
 		if err != nil {
 			if mErr == nil {
-				mErr = &multiErr{}
+				mErr = &resources.MultiErr{}
 			}
-			mErr.(*multiErr).Add(fmt.Errorf("failed installation of %s: %w", product.Name, err))
+			mErr.(*resources.MultiErr).Add(fmt.Errorf("failed installation of %s: %w", product.Name, err))
 		}
 
 		// Verify that watches for this product CRDs have been created
@@ -711,8 +843,11 @@ func (r *RHMIReconciler) handleCROConfigDeletion(rhmi rhmiv1alpha1.RHMI) error {
 
 func (r *RHMIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// Creates a new managed install CR if it is not available
-	kubeConfig := controllerruntime.GetConfigOrDie()
-	client, err := k8sclient.New(kubeConfig, k8sclient.Options{})
+	// kubeConfig := controllerruntime.GetConfigOrDie()
+	kubeConfig := mgr.GetConfig()
+	client, err := k8sclient.New(kubeConfig, k8sclient.Options{
+		Scheme: mgr.GetScheme(),
+	})
 	err = r.createInstallationCR(context.Background(), client)
 	if err != nil {
 		return err
@@ -740,7 +875,7 @@ func (r *RHMIReconciler) createInstallationCR(ctx context.Context, serverClient 
 		return err
 	}
 
-	r.Log.Info(fmt.Sprintf("Looking for rhmi CR in %s namespace", namespace))
+	logrus.Infof("Looking for rhmi CR in %s namespace", namespace)
 
 	installationList := &rhmiv1alpha1.RHMIList{}
 	listOpts := []k8sclient.ListOption{
@@ -755,13 +890,14 @@ func (r *RHMIReconciler) createInstallationCR(ctx context.Context, serverClient 
 	// Creates installation CR in case there is none
 	if len(installationList.Items) == 0 {
 		useClusterStorage, _ := os.LookupEnv("USE_CLUSTER_STORAGE")
+		rebalancePods := getRebalancePods()
 		cssreAlertingEmailAddress, _ := os.LookupEnv(alertingEmailAddressEnvName)
 		buAlertingEmailAddress, _ := os.LookupEnv(buAlertingEmailAddressEnvName)
 
 		installType, _ := os.LookupEnv(installTypeEnvName)
 		priorityClassName, _ := os.LookupEnv(priorityClassNameEnvName)
 
-		r.Log.Info(fmt.Sprintf("Creating a %s rhmi CR with USC %s, as no CR rhmis were found in %s namespace", installType, useClusterStorage, namespace))
+		logrus.Infof("Creating a %s rhmi CR with USC %s, as no CR rhmis were found in %s namespace", installType, useClusterStorage, namespace)
 
 		if installType == "" {
 			installType = string(rhmiv1alpha1.InstallationTypeManaged)
@@ -793,6 +929,7 @@ func (r *RHMIReconciler) createInstallationCR(ctx context.Context, serverClient 
 			Spec: rhmiv1alpha1.RHMISpec{
 				Type:                 installType,
 				NamespacePrefix:      namespacePrefix,
+				RebalancePods:        rebalancePods,
 				SelfSignedCerts:      false,
 				SMTPSecret:           namespacePrefix + "smtp",
 				DeadMansSnitchSecret: namespacePrefix + "deadmanssnitch",
@@ -819,6 +956,13 @@ func (r *RHMIReconciler) createInstallationCR(ctx context.Context, serverClient 
 	}
 
 	return nil
+}
+func getRebalancePods() bool {
+	rebalance, exists := os.LookupEnv("REBALANCE_PODS")
+	if !exists || rebalance == "true" {
+		return true
+	}
+	return false
 }
 
 func getCrName(installType string) string {
@@ -897,20 +1041,4 @@ func requiredEnvVar(check func(string) error) func(string, bool) error {
 
 		return check(value)
 	}
-}
-
-type multiErr struct {
-	errors []string
-}
-
-func (mer *multiErr) Error() string {
-	return "product installation errors : " + strings.Join(mer.errors, ":")
-}
-
-//Add an error to the collection
-func (mer *multiErr) Add(err error) {
-	if mer.errors == nil {
-		mer.errors = []string{}
-	}
-	mer.errors = append(mer.errors, err.Error())
 }

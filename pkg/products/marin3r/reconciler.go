@@ -262,7 +262,21 @@ func (r *Reconciler) reconcileAlerts(ctx context.Context, client k8sclient.Clien
 
 	granafaConsoleURL, err := grafana.GetGrafanaConsoleURL(ctx, client, installation)
 	if err != nil {
+		if productsStage, ok := installation.Status.Stages[integreatlyv1alpha1.ProductsStage]; ok {
+			if productsStage.Products != nil {
+				grafanaProduct, grafanaProductExists := productsStage.Products[integreatlyv1alpha1.ProductGrafana]
+				// Ignore the Forbidden and NotFound errors if Grafana is not installed yet
+				if !grafanaProductExists ||
+					(grafanaProduct.Status != integreatlyv1alpha1.PhaseCompleted &&
+						(k8serr.IsForbidden(err) || k8serr.IsNotFound(err))) {
+
+					logrus.Info("Failed to get Grafana console URL. Awaiting completion of Grafana installation")
+					return integreatlyv1alpha1.PhaseInProgress, nil
+				}
+			}
+		}
 		logrus.Errorf("failed to get Grafana console URL %v", err)
+		return integreatlyv1alpha1.PhaseFailed, err
 	}
 
 	grafanaDashboardURL := fmt.Sprintf("%s/d/66ab72e0d012aacf34f907be9d81cd9e/rate-limiting", granafaConsoleURL)
